@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <ostream>
 #include <stdexcept>
 #include <vector>
 
@@ -11,10 +12,11 @@ class colony {
     class colony_iterator;
 public:
     using size_type = size_t;
-    using reference = T &;
-    using const_reference = const T &;
+    using value_type = T;
+    using reference = value_type &;
+    using const_reference = const value_type &;
     using iterator = colony_iterator;
-    using const_iterator = const iterator;
+    using const_iterator = const colony_iterator;
 
     colony() = default;
 
@@ -27,59 +29,77 @@ public:
     template <class... Args>
     void emplace_back(Args &&...args);
 
+    void erase(size_type pos);
+    iterator erase(colony_iterator it);
+
     void clear();
+
+    void shrink_to_fit();
 
     reference at(size_type pos);
     const_reference at(size_type pos) const;
+    size_type next(size_type pos) const noexcept;
 
-    iterator begin() noexcept;
+    iterator begin() noexcept { return iterator(this, used_.find_first()); };
     const_iterator begin() const noexcept;
-    iterator end() noexcept;
+    iterator end() noexcept { return iterator(this, boost::dynamic_bitset<>::npos); };
     const_iterator end() const noexcept;
 
-    size_type capacity() const noexcept { return std::pow(2uz, blocks_.size()) - 1uz; }
+    size_type capacity() const noexcept { return block_size * blocks_.size(); }
     size_type size() const noexcept { return size_; }
 
 private:
-    static constexpr size_type block_size = 32;
+    static constexpr size_type block_size = 2;
 
-    using block_container = std::vector<block<T>>;
-    using block_iterator = block_container::iterator;
+    using block_type = block<T>;
+    using block_container = std::vector<block_type>;
 
     class colony_iterator {
     public:
-        colony_iterator(colony *colony, T *pos)
+        ~colony_iterator() = default;
+
+        colony_iterator(colony *colony, size_type pos)
             : colony_(colony)
             , pos_(pos)
         {
         }
 
-        iterator &operator++()
+        iterator &operator++() noexcept
         {
-
+            pos_ = colony_->next(pos_);
             return *this;
         }
 
-        iterator operator++(int)
+        iterator operator++(int) noexcept
         {
             auto tmp = *this;
             ++*this;
             return tmp;
         }
 
-        bool operator==(const iterator &other)
+        colony::value_type &operator*()
+        {
+            return colony_->at(pos_);
+        }
+
+        colony::value_type &operator*() const
+        {
+            return colony_->at(pos_);
+        }
+
+        bool operator==(const iterator &other) const noexcept
         {
             return colony_ == other.colony_ && pos_ == other.pos_;
         }
 
     private:
         colony *colony_;
-        T *pos_;
+        size_type pos_;
     };
 
-    size_type offset(block_iterator block) const noexcept;
+    size_type offset(block_type &block) const noexcept;
     size_type block_pos(size_type offset) const noexcept;
-    block_iterator get_free_block();
+    block_type &get_free_block();
 
     size_type size_ = 0;
     block_container blocks_{};
@@ -90,8 +110,8 @@ template <class T>
 template <class U>
 void colony<T>::push_back(const U &value)
 {
-    auto block = get_free_block();
-    const auto pos = block->push_back(value);
+    auto &block = get_free_block();
+    const auto pos = block.push_back(value);
     used_.set(offset(block) + pos);
     ++size_;
 }
@@ -100,8 +120,8 @@ template <class T>
 template <class U>
 void colony<T>::push_back(U &&value)
 {
-    auto block = get_free_block();
-    const auto pos = block->push_back(std::move(value));
+    auto &block = get_free_block();
+    const auto pos = block.push_back(std::move(value));
     used_.set(offset(block) + pos);
     ++size_;
 }
@@ -110,7 +130,7 @@ template <class T>
 template <class... Args>
 void colony<T>::emplace_back(Args &&...args)
 {
-    auto block = get_free_block();
+    auto &block = get_free_block();
     const auto pos = block->push_back(std::forward<Args>(args)...);
     used_.set(offset(block) + pos);
     ++size_;
@@ -124,44 +144,76 @@ void colony<T>::clear()
 }
 
 template <class T>
-colony<T>::size_type colony<T>::offset(block_iterator block) const noexcept
+void colony<T>::erase(size_type pos)
 {
-    return std::pow(2uz, block - std::begin(blocks_)) - 1uz;
+    if (used_.at(pos) == false) {
+        return;
+    }
+
+    blocks_.at(block_pos(pos)).erase(pos % block_size);
+    used_.flip(pos);
+}
+
+template <class T>
+colony<T>::iterator colony<T>::erase(colony_iterator it)
+{
+    erase(it->pos_);
+    return ++it;
+}
+
+template <class T>
+void colony<T>::shrink_to_fit()
+{
+    // We can't move existing elements to another place,
+    // because ecs stores fixed indices into the colony.
+    // TODO: Can we remove empty blocks?
+}
+
+template <class T>
+colony<T>::size_type colony<T>::offset(block_type &block) const noexcept
+{
+    return (&block - blocks_.data()) * block_size;
 }
 
 template <class T>
 colony<T>::size_type colony<T>::block_pos(size_type offset) const noexcept
 {
-    return std::log2(offset + 1uz);
+    return offset / block_size;
 }
 
 template <class T>
 colony<T>::reference colony<T>::at(size_type pos)
 {
-    if (pos >= capacity())
-        throw std::out_of_range(std::format("{} >= {}", pos, capacity()));
+    if (used_.at(pos) == false)
+        throw std::out_of_range("invalid index");
 
     const auto n = block_pos(pos);
-    return blocks_.at(n).at(pos - n);
+    return blocks_.at(n).at(pos % block_size);
 }
 
 template <class T>
 colony<T>::const_reference colony<T>::at(size_type pos) const
 {
-    if (pos >= capacity())
-        throw std::out_of_range(std::format("{} >= {}", pos, capacity()));
+    if (used_.at(pos) == false)
+        throw std::out_of_range("invalid index");
 
     const auto n = block_pos(pos);
     return blocks_.at(n).at(pos - n);
 }
 
 template <class T>
-colony<T>::block_iterator colony<T>::get_free_block()
+colony<T>::size_type colony<T>::next(size_type pos) const noexcept
+{
+    return used_.find_next(pos);
+}
+
+template <class T>
+colony<T>::block_type &colony<T>::get_free_block()
 {
     if (size_ == capacity()) {
-        blocks_.emplace_back(size_ + 1uz);
-        used_.resize(2uz * size_  + 1uz);
-        return blocks_.end() - 1uz;
+        blocks_.emplace_back(block_size);
+        used_.resize(size_ + block_size);
+        return blocks_.back();
     }
 
     auto block = std::ranges::find_if(blocks_,
@@ -169,6 +221,6 @@ colony<T>::block_iterator colony<T>::get_free_block()
 
     assert(block != std::end(blocks_));
 
-    return block;
+    return *block;
 }
 

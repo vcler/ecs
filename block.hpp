@@ -4,7 +4,9 @@
 #include <format>
 #include <iterator>
 #include <memory>
+#include <ostream>
 #include <stdexcept>
+#include <print>
 
 template <class T>
 class block {
@@ -29,6 +31,7 @@ public:
         const pointer next = *free_;
         std::construct_at(to_data(free_), std::move(value));
         free_ = to_meta(next);
+        ++size_;
 
         return pos;
     }
@@ -43,6 +46,7 @@ public:
         const pointer next = *free_;
         std::construct_at(to_data(free_), value);
         free_ = next;
+        ++size_;
 
         return pos;
     }
@@ -57,18 +61,9 @@ public:
         const pointer next = *free_;
         std::construct_at(to_data(free_), std::forward<Args>(args)...);
         free_ = next;
+        ++size_;
 
         return pos;
-    }
-
-    void erase(size_type pos)
-    {
-        if (pos >= capacity_)
-            throw std::out_of_range(std::format("{} >= {}", pos, capacity_));
-
-        std::destroy_at(data_ + pos);
-        *to_meta(data_ + pos) = free_;
-        free_ = data_ + pos;
     }
 
     void erase(pointer pos)
@@ -77,9 +72,20 @@ public:
             throw std::out_of_range("pos out of range");
 
         std::destroy_at(pos);
-        *static_cast<T **>(pos) = free_;
-        free_ = pos;
+
+        *to_meta(pos) = to_data(free_);
+        free_ = to_meta(pos);
+        --size_;
     }
+
+    void erase(size_type pos)
+    {
+        if (pos >= capacity_)
+            throw std::out_of_range(std::format("{} >= {}", pos, capacity_));
+
+        erase(data_ + pos);
+    }
+
 
     T &at(size_type pos)
     {
@@ -97,6 +103,7 @@ public:
     {
         using std::swap;
         swap(lhs.capacity_, rhs.capacity_);
+        swap(lhs.size_, rhs.size_);
         swap(lhs.data_, rhs.data_);
         swap(lhs.free_, rhs.free_);
     }
@@ -111,19 +118,32 @@ public:
                 skip.set(std::distance(data_, to_data(free_)));
 
             for (size_type i = 0; i < capacity_; ++i) {
-                if (skip.at(i) == false)
+                if (skip.at(i) == false) {
                     std::destroy_at(data_ + i);
+                }
             }
         }
+        size_ = 0;
     }
 
     bool has_space() const noexcept { return free_ != nullptr; }
+    size_type space() const noexcept { return capacity_ - size_; }
 
 private:
+    void print_free_list()
+    {
+        auto free = free_;
+        for ( ; free != nullptr; free = to_meta(*free))
+            std::print("{} -> ", std::distance(data_, to_data(free)));
+        std::println();
+    }
+
+
     T **to_meta(T *pos) { return reinterpret_cast<T **>(pos); }
     T *to_data(T **pos) { return reinterpret_cast<T *>(pos); }
 
     size_type capacity_ = 0;
+    size_type size_ = 0;
     T *data_ = nullptr;
     T **free_ = nullptr;
 };
