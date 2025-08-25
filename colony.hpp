@@ -21,29 +21,27 @@ public:
     colony() = default;
 
     template <class U>
-    void push_back(const U &value);
+    size_type push_back(const U &value);
 
     template <class U>
-    void push_back(U &&value);
+    size_type push_back(U &&value);
 
     template <class... Args>
-    void emplace_back(Args &&...args);
+    size_type emplace_back(Args &&...args);
 
     void erase(size_type pos);
     iterator erase(colony_iterator it);
 
     void clear();
 
-    void shrink_to_fit();
-
     reference at(size_type pos);
     const_reference at(size_type pos) const;
     size_type next(size_type pos) const noexcept;
 
-    iterator begin() noexcept { return iterator(this, used_.find_first()); };
-    const_iterator begin() const noexcept;
-    iterator end() noexcept { return iterator(this, boost::dynamic_bitset<>::npos); };
-    const_iterator end() const noexcept;
+    iterator begin() noexcept { return iterator(this, used_.find_first()); }
+    //const_iterator begin() const noexcept { return iterator(this, used_.find_first()); }
+    iterator end() noexcept { return iterator(this, boost::dynamic_bitset<>::npos); }
+    //const_iterator end() const noexcept { return iterator(this, boost::dynamic_bitset<>::npos); }
 
     size_type capacity() const noexcept { return block_size * blocks_.size(); }
     size_type size() const noexcept { return size_; }
@@ -92,6 +90,8 @@ private:
             return colony_ == other.colony_ && pos_ == other.pos_;
         }
 
+        size_type pos() const noexcept { return pos_; }
+
     private:
         colony *colony_;
         size_type pos_;
@@ -108,32 +108,38 @@ private:
 
 template <class T>
 template <class U>
-void colony<T>::push_back(const U &value)
+colony<T>::size_type colony<T>::push_back(const U &value)
 {
     auto &block = get_free_block();
-    const auto pos = block.push_back(value);
-    used_.set(offset(block) + pos);
+    auto pos = block.push_back(value);
+    pos += offset(block);
+    used_.set(pos);
     ++size_;
+    return pos;
 }
 
 template <class T>
 template <class U>
-void colony<T>::push_back(U &&value)
+colony<T>::size_type colony<T>::push_back(U &&value)
 {
     auto &block = get_free_block();
-    const auto pos = block.push_back(std::move(value));
-    used_.set(offset(block) + pos);
+    auto pos = block.push_back(std::move(value));
+    pos += offset(block);
+    used_.set(pos);
     ++size_;
+    return pos;
 }
 
 template <class T>
 template <class... Args>
-void colony<T>::emplace_back(Args &&...args)
+colony<T>::size_type colony<T>::emplace_back(Args &&...args)
 {
     auto &block = get_free_block();
-    const auto pos = block->push_back(std::forward<Args>(args)...);
-    used_.set(offset(block) + pos);
+    auto pos = block.emplace_back(std::forward<Args>(args)...);
+    pos += offset(block);
+    used_.set(pos);
     ++size_;
+    return pos;
 }
 
 template <class T>
@@ -157,16 +163,8 @@ void colony<T>::erase(size_type pos)
 template <class T>
 colony<T>::iterator colony<T>::erase(colony_iterator it)
 {
-    erase(it->pos_);
+    erase(it.pos());
     return ++it;
-}
-
-template <class T>
-void colony<T>::shrink_to_fit()
-{
-    // We can't move existing elements to another place,
-    // because ecs stores fixed indices into the colony.
-    // TODO: Can we remove empty blocks?
 }
 
 template <class T>

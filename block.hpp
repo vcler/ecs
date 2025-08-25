@@ -45,7 +45,7 @@ public:
         const size_t pos = std::distance(data_, to_data(free_));
         const pointer next = *free_;
         std::construct_at(to_data(free_), value);
-        free_ = next;
+        free_ = to_meta(next);
         ++size_;
 
         return pos;
@@ -60,7 +60,7 @@ public:
         const size_t pos = std::distance(data_, to_data(free_));
         const pointer next = *free_;
         std::construct_at(to_data(free_), std::forward<Args>(args)...);
-        free_ = next;
+        free_ = to_meta(next);
         ++size_;
 
         return pos;
