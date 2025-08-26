@@ -7,16 +7,21 @@
 
 #include "block.hpp"
 
+
+template <class Colony>
+class colony_iterator;
+
 template <class T>
 class colony {
-    class colony_iterator;
+    static_assert(sizeof(T) >= sizeof(void *)
+            && "value type must have at least word size");
 public:
     using size_type = size_t;
     using value_type = T;
     using reference = value_type &;
     using const_reference = const value_type &;
-    using iterator = colony_iterator;
-    using const_iterator = const colony_iterator;
+    using iterator = colony_iterator<colony>;
+    using const_iterator = colony_iterator<const colony>;
 
     colony() = default;
 
@@ -30,7 +35,7 @@ public:
     size_type emplace_back(Args &&...args);
 
     void erase(size_type pos);
-    iterator erase(colony_iterator it);
+    iterator erase(iterator it);
 
     void clear();
 
@@ -39,63 +44,18 @@ public:
     size_type next(size_type pos) const noexcept;
 
     iterator begin() noexcept { return iterator(this, used_.find_first()); }
-    //const_iterator begin() const noexcept { return iterator(this, used_.find_first()); }
+    const_iterator begin() const noexcept { return const_iterator(this, used_.find_first()); }
     iterator end() noexcept { return iterator(this, boost::dynamic_bitset<>::npos); }
-    //const_iterator end() const noexcept { return iterator(this, boost::dynamic_bitset<>::npos); }
+    const_iterator end() const noexcept { return const_iterator(this, boost::dynamic_bitset<>::npos); }
 
     size_type capacity() const noexcept { return block_size * blocks_.size(); }
     size_type size() const noexcept { return size_; }
 
 private:
-    static constexpr size_type block_size = 2;
+    static constexpr size_type block_size = 32;
 
     using block_type = block<T>;
     using block_container = std::vector<block_type>;
-
-    class colony_iterator {
-    public:
-        ~colony_iterator() = default;
-
-        colony_iterator(colony *colony, size_type pos)
-            : colony_(colony)
-            , pos_(pos)
-        {
-        }
-
-        iterator &operator++() noexcept
-        {
-            pos_ = colony_->next(pos_);
-            return *this;
-        }
-
-        iterator operator++(int) noexcept
-        {
-            auto tmp = *this;
-            ++*this;
-            return tmp;
-        }
-
-        colony::value_type &operator*()
-        {
-            return colony_->at(pos_);
-        }
-
-        colony::value_type &operator*() const
-        {
-            return colony_->at(pos_);
-        }
-
-        bool operator==(const iterator &other) const noexcept
-        {
-            return colony_ == other.colony_ && pos_ == other.pos_;
-        }
-
-        size_type pos() const noexcept { return pos_; }
-
-    private:
-        colony *colony_;
-        size_type pos_;
-    };
 
     size_type offset(block_type &block) const noexcept;
     size_type block_pos(size_type offset) const noexcept;
@@ -105,6 +65,57 @@ private:
     block_container blocks_{};
     boost::dynamic_bitset<> used_{};
 };
+
+
+template <class Colony>
+class colony_iterator {
+    using size_type = Colony::size_type;
+    using value_type = Colony::value_type;
+
+public:
+    ~colony_iterator() = default;
+
+    colony_iterator(Colony *colony, size_type pos)
+        : colony_(colony)
+        , pos_(pos)
+    {
+    }
+
+    colony_iterator &operator++() noexcept
+    {
+        pos_ = colony_->next(pos_);
+        return *this;
+    }
+
+    colony_iterator operator++(int) noexcept
+    {
+        auto tmp = *this;
+        ++*this;
+        return tmp;
+    }
+
+    value_type &operator*()
+    {
+        return colony_->at(pos_);
+    }
+
+    value_type &operator*() const
+    {
+        return colony_->at(pos_);
+    }
+
+    bool operator==(const colony_iterator &other) const noexcept
+    {
+        return colony_ == other.colony_ && pos_ == other.pos_;
+    }
+
+    size_type pos() const noexcept { return pos_; }
+
+private:
+    Colony *colony_;
+    size_type pos_;
+};
+
 
 template <class T>
 template <class U>
@@ -147,6 +158,7 @@ void colony<T>::clear()
 {
     for (auto &block : blocks_)
         block.clear();
+    size_ = 0;
 }
 
 template <class T>
@@ -158,10 +170,11 @@ void colony<T>::erase(size_type pos)
 
     blocks_.at(block_pos(pos)).erase(pos % block_size);
     used_.flip(pos);
+    --size_;
 }
 
 template <class T>
-colony<T>::iterator colony<T>::erase(colony_iterator it)
+colony<T>::iterator colony<T>::erase(iterator it)
 {
     erase(it.pos());
     return ++it;
