@@ -43,13 +43,13 @@ public:
     const_reference at(size_type pos) const;
     size_type next(size_type pos) const noexcept;
 
-    iterator begin() noexcept { return iterator(this, used_.find_first()); }
-    const_iterator begin() const noexcept { return const_iterator(this, used_.find_first()); }
-    iterator end() noexcept { return iterator(this, boost::dynamic_bitset<>::npos); }
-    const_iterator end() const noexcept { return const_iterator(this, boost::dynamic_bitset<>::npos); }
+    iterator begin() noexcept;
+    const_iterator begin() const noexcept;
+    iterator end() noexcept;
+    const_iterator end() const noexcept;
 
-    size_type capacity() const noexcept { return block_size * blocks_.size(); }
-    size_type size() const noexcept { return size_; }
+    size_type capacity() const noexcept;
+    size_type size() const noexcept;
 
 private:
     static constexpr size_type block_size = 32;
@@ -233,5 +233,41 @@ colony<T>::block_type &colony<T>::get_free_block()
     assert(block != std::end(blocks_));
 
     return *block;
+}
+
+template <class T>
+colony<T>::iterator colony<T>::begin() noexcept
+{
+    return iterator(this, used_.find_first());
+}
+
+template <class T>
+colony<T>::const_iterator colony<T>::begin() const noexcept
+{
+    return const_iterator(this, used_.find_first());
+}
+
+template <class T>
+colony<T>::iterator colony<T>::end() noexcept
+{
+    return iterator(this, boost::dynamic_bitset<>::npos);
+}
+
+template <class T>
+colony<T>::const_iterator colony<T>::end() const noexcept
+{
+    return const_iterator(this, boost::dynamic_bitset<>::npos);
+}
+
+template <class T>
+colony<T>::size_type colony<T>::capacity() const noexcept
+{
+    return block_size * blocks_.size();
+}
+
+template <class T>
+colony<T>::size_type colony<T>::size() const noexcept
+{
+    return size_;
 }
 
