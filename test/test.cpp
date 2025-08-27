@@ -77,8 +77,8 @@ TEST_CASE("iterator traversal") {
 
 TEST_CASE("iterator validity after insertions") {
     colony<double> c;
-    auto i1 = c.push_back(1);
-    auto i2 = c.push_back(2);
+    c.push_back(1);
+    c.push_back(2);
     auto it = c.begin(); // Should point to 1
 
     c.push_back(3); // Insert after capturing iterator
