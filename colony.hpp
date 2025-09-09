@@ -73,8 +73,6 @@ class colony_iterator {
     using value_type = Colony::value_type;
 
 public:
-    ~colony_iterator() = default;
-
     colony_iterator(Colony *colony, size_type pos)
         : colony_(colony)
         , pos_(pos)

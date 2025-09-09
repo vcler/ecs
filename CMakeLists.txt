@@ -8,9 +8,10 @@ set(CMAKE_CXX_FLAGS "-g -Wall -Wextra -pedantic")
 
 add_subdirectory(test)
 
-add_executable(colony
+add_executable(ecs
     main.cpp
+    view.cpp
 )
 
-target_include_directories(colony PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(ecs PUBLIC ${CMAKE_SOURCE_DIR})
 

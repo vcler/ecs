@@ -5,6 +5,7 @@
 namespace ecs {
 
 struct component {
+    // TODO: perf: replace pos with pointer
     size_t hash;
     size_t pos;
 

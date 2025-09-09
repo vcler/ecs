@@ -54,7 +54,7 @@ auto xor_type_hash()
     // disallow same types to keep randomness
     static_assert(pairwise_distinct<Ts...>);
 
-    return (type_hash<Ts> ^ ...);
+    return (type_hash<Ts>() ^ ...);
 }
 
 template <class T, size_t>
