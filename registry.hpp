@@ -8,11 +8,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include <colony.hpp>
+#include <detail/colony.hpp>
+#include <detail/types.hpp>
 #include <component.hpp>
-#include <detail.hpp>
 #include <view.hpp>
-#include <types.hpp>
 
 namespace ecs {
 
@@ -40,7 +39,7 @@ public:
 
 private:
     template <class C>
-    storage_type<C> &storage_for();
+    detail::storage_type<C> &storage_for();
 
     template <class... Cs>
     typed_view_range<Cs...> range_for();
@@ -70,10 +69,10 @@ private:
 template <class C>
 class component_range {
 public:
-    using iterator = storage_type<C>::iterator;
-    using const_iterator = const storage_type<C>::iterator;
+    using iterator = detail::storage_type<C>::iterator;
+    using const_iterator = const iterator;
 
-    component_range(storage_type<C> &components);
+    component_range(detail::storage_type<C> &components);
 
     iterator begin();
     iterator end();
@@ -81,7 +80,7 @@ public:
     const_iterator end() const;
 
 private:
-    storage_type<C> &components_;
+    detail::storage_type<C> &components_;
 };
 
 } // namespace ecs
@@ -138,16 +137,16 @@ registry::handle_type registry::allocate(Cs &&...args)
 }
 
 template <class C>
-storage_type<C> &registry::storage_for()
+detail::storage_type<C> &registry::storage_for()
 {
     const auto hash = detail::type_hash<C>();
 
     if (!components_.contains(hash)) {
         components_.emplace(hash,
-                std::make_shared<storage_type<C>>());
+                std::make_shared<detail::storage_type<C>>());
     }
 
-    return *reinterpret_cast<storage_type<C> *>(
+    return *reinterpret_cast<detail::storage_type<C> *>(
             components_.at(hash).get());
 }
 
@@ -283,26 +282,9 @@ void registry::destroy_component(handle_type owner)
     storage_for<C>().erase(it->pos);
 }
 
-/*
-template <class C>
-class component_range {
-public:
-    using iterator = storage_type<C>::iterator;
-    using const_iterator = const storage_type<C>::iterator;
-
-    iterator begin();
-    iterator end();
-    const_iterator begin() const;
-    const_iterator end() const;
-
-private:
-    storage_type<C> &components_;
-};
-*/
-
 template <class C>
 component_range<C>::component_range(
-    storage_type<C> &components)
+    detail::storage_type<C> &components)
     : components_(components)
 {
 }

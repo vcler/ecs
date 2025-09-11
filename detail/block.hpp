@@ -8,6 +8,9 @@
 #include <stdexcept>
 #include <print>
 
+namespace ecs {
+namespace detail {
+
 template <class T>
 class block {
 public:
@@ -187,4 +190,7 @@ block<T> &block<T>::operator=(block &&other)
     swap(*this, other);
     return *this;
 }
+
+} // namespace detail
+} // namespace ecs
 

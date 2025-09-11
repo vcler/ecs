@@ -1,13 +1,18 @@
 #pragma once
 
-#include <atomic>
+#include <cstddef>
 #include <tuple>
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
 
+#include <detail/colony.hpp>
+
 namespace ecs {
 namespace detail {
+
+template <class C>
+using storage_type = colony<std::remove_cvref_t<C>>;
 
 template <class T, class... Us>
 constexpr bool is_one_of = (std::is_same_v<T, Us> || ...);
@@ -40,11 +45,13 @@ consteval size_t type_index()
 }
 
 template <class... Ts>
-constexpr bool pairwise_distinct = (is_unique<Ts, Ts...>() && ...);
+constexpr bool pairwise_distinct =
+        (is_unique<Ts, Ts...>() && ...);
 
 template <class T>
 auto type_hash()
 {
+    // typeid discards cvref qualifiers
     return typeid(T).hash_code();
 }
 

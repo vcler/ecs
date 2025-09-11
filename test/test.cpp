@@ -1,9 +1,11 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
-#include "colony.hpp" // Adjust to your actual header location
+#include "detail/colony.hpp" // Adjust to your actual header location
 #include <string>
 #include <vector>
 #include <type_traits>
+
+using namespace ecs::detail;
 
 // Example type for complex construction
 struct MyStruct {

@@ -1,12 +1,13 @@
 #pragma once
 
 #include <algorithm>
-#include <ostream>
 #include <stdexcept>
 #include <vector>
 
-#include "block.hpp"
+#include <detail/block.hpp>
 
+namespace ecs {
+namespace detail {
 
 template <class Colony>
 class colony_iterator;
@@ -268,4 +269,7 @@ colony<T>::size_type colony<T>::size() const noexcept
 {
     return size_;
 }
+
+} // namespace detail
+} // namespace ecs
 

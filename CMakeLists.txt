@@ -10,7 +10,6 @@ add_subdirectory(test)
 
 add_executable(ecs
     main.cpp
-    view.cpp
 )
 
 target_include_directories(ecs PUBLIC ${CMAKE_SOURCE_DIR})
