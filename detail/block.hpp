@@ -75,6 +75,14 @@ public:
         return pos;
     }
 
+    bool contains(pointer pos) const noexcept
+    {
+        if (data_ == nullptr)
+            return false;
+
+        return pos >= data_ && pos < data_ + capacity_;
+    }
+
     void erase(pointer pos)
     {
         if (pos < data_ || pos >= data_ + capacity_)

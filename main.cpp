@@ -33,7 +33,8 @@ int main()
 
     reg.allocate(X{1.0}, Y{2.0}, Z{3.0});
     reg.allocate(X{1.0}, Y{2.0}, Z{3.0});
-    reg.allocate(X{1.0}, Y{1.0});
+    auto ent =reg.allocate(X{1.0}, Y{1.0});
+    reg.emplace(ent, Z{99.0});
 
     //X &cx = reg.get<X>(ent);
     //std::println("x == {}", cx.valuex);

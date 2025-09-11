@@ -19,6 +19,7 @@ class colony {
 public:
     using size_type = size_t;
     using value_type = T;
+    using pointer = T *;
     using reference = value_type &;
     using const_reference = const value_type &;
     using iterator = colony_iterator<colony>;
@@ -37,6 +38,7 @@ public:
 
     void erase(size_type pos);
     iterator erase(iterator it);
+    void erase(pointer ptr);
 
     void clear();
 
@@ -177,6 +179,17 @@ colony<T>::iterator colony<T>::erase(iterator it)
 {
     erase(it.pos());
     return ++it;
+}
+
+template <class T>
+void colony<T>::erase(pointer ptr)
+{
+    for (auto &block : blocks_) {
+        if (block.contains(ptr)) {
+            block.erase(ptr);
+            return;
+        }
+    }
 }
 
 template <class T>

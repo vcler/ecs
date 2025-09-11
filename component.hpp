@@ -5,9 +5,8 @@
 namespace ecs {
 
 struct component {
-    // TODO: perf: replace pos with pointer
     size_t hash;
-    size_t pos;
+    void *ptr;
 
     struct hash_fn {
         size_t operator()(const component &arg) const noexcept

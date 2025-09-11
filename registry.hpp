@@ -37,6 +37,12 @@ public:
     template <class C, class... Cs>
     auto range();
 
+    template <class C>
+    C &emplace(handle_type ent, C &&arg);
+
+    template <class C, class... Args>
+    C &emplace(handle_type ent, Args &&...args);
+
 private:
     template <class C>
     detail::storage_type<C> &storage_for();
@@ -105,7 +111,7 @@ registry::handle_type registry::allocate(Cs &&...args)
         auto [pos, ptr] = construct_component(
                 std::forward<decltype(arg)>(arg));
 
-        comps.emplace(hash, pos);
+        comps.emplace(hash, ptr);
         ptrs.emplace(hash, static_cast<void *>(ptr));
     };
 
@@ -201,23 +207,9 @@ typed_view_range<Cs...> registry::range_for()
         }
 
         // create a new view
-        std::unordered_map<size_type, void *> ptrs;
-        auto get_addr = [this, &info](auto t)
-        {
-            using type = typename decltype(t)::type;
-            const auto hash = detail::type_hash<type>();
-
-            auto comp = info.components.find({ hash, 0 });
-            return std::make_tuple(hash,
-                    &(this->storage_for<type>()
-                        .at(comp->pos)));
-        };
-
-        (ptrs.emplace(get_addr(std::type_identity<Cs>{})), ...);
-
-        auto it = std::begin(view);
+        auto it = view.begin();
         for (const auto hash : range.types) {
-            *it++ = ptrs.at(hash);
+            *it++ = info.components.find({ hash, 0 })->ptr;
         }
 
         range.push_back(ent, std::span(
@@ -250,7 +242,7 @@ C &registry::get(handle_type ent)
     if (it == std::end(comps))
         throw std::out_of_range("no such component");
 
-    return storage_for<C>().at(it->pos);
+    return *static_cast<C *>(it->ptr);
 }
 
 template <class... Cs>
@@ -271,6 +263,54 @@ void registry::destroy(handle_type ent)
 }
 
 template <class C>
+C &registry::emplace(handle_type ent, C &&arg)
+{
+    if (!entities_.contains(ent))
+        throw std::out_of_range("no such entity");
+
+    const auto hash = detail::type_hash<C>();
+    auto &comps = entities_.at(ent).components;
+    if (comps.contains({ hash, 0 }))
+        throw std::logic_error("duplicate component");
+
+
+    auto [pos, ptr] = construct_component(
+            std::forward<C>(arg));
+
+    comps.emplace(hash, ptr);
+
+    // update view
+    std::vector<void *> view(comps.size() + 1uz);
+
+    for (auto &[xor_hash, range] : ranges_) {
+        if (!range.types.contains(hash))
+            continue;
+
+        // candidate
+        if (!range.captures(comps))
+            continue;
+
+        // create a new view
+        auto it = view.data();
+        for (const auto hash : range.types) {
+            *it++ = comps.find({ hash, 0 })->ptr;
+        }
+
+        range.push_back(ent, std::span(
+            view.data(), view.capacity()));
+    }
+
+    return *ptr;
+}
+
+template <class C, class... Args>
+C &registry::emplace(handle_type ent, Args &&...args)
+{
+    // extra move but less code
+    return emplace(ent, C(std::forward<Args>(args)...));
+}
+
+template <class C>
 void registry::destroy_component(handle_type owner)
 {
     const auto &comps = entities_.at(owner).components;
@@ -279,7 +319,7 @@ void registry::destroy_component(handle_type owner)
     if (it == std::end(comps))
         throw std::out_of_range("no such component");
 
-    storage_for<C>().erase(it->pos);
+    storage_for<C>().erase(it->ptr);
 }
 
 template <class C>
