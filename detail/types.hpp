@@ -84,7 +84,7 @@ template <class C>
 concept FatComponent = requires(const C &comp)
 {
     // stores handle of the entity it is owned by
-    { comp.owner } -> std::same_as<size_t>;
+    requires std::same_as<decltype(comp.owner), handle_type>;
 };
 
 } // namespace detail

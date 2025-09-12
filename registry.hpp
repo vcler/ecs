@@ -50,6 +50,8 @@ public:
     handle_type entity_of(const C &comp) const noexcept;
 
     template <class C, detail::FatComponent F>
+    bool has_sibling(const F &comp) const;
+    template <class C, detail::FatComponent F>
     C &sibling(const F &comp);
 
 private:
@@ -61,10 +63,10 @@ private:
 
     template <class C>
     std::tuple<size_type, C *>
-    construct_component(C &&comp);
+    construct_component(handle_type owner, C &&comp);
 
     template <class C>
-    void destroy_component(handle_type owner);
+    void destroy_component(handle_type ent);
 
     struct entinfo {
         entinfo(size_t hash, component_set &&comps)
@@ -119,7 +121,7 @@ handle_type registry::create(Cs &&...args)
         using type = std::remove_cvref_t<decltype(arg)>;
         const auto hash = detail::type_hash<type>();
 
-        auto [pos, ptr] = construct_component(
+        auto [pos, ptr] = construct_component(ent,
                 std::forward<decltype(arg)>(arg));
 
         comps.emplace(hash, ptr);
@@ -234,10 +236,17 @@ typed_view_range<Cs...> registry::range_for()
 
 template <class C>
 std::tuple<registry::size_type, C *>
-registry::construct_component(C &&comp)
+registry::construct_component(handle_type owner, C &&arg)
 {
     auto &stor = storage_for<C>();
-    size_type pos = stor.push_back(std::forward<C>(comp));
+    size_type pos = stor.push_back(std::forward<C>(arg));
+
+    auto &comp = stor.at(pos);
+    if constexpr (detail::FatComponent<C>) {
+        // set owner
+        comp.owner = owner;
+    } else {
+    }
 
     return std::make_tuple(pos, &(stor.at(pos)));
 }
@@ -286,7 +295,7 @@ C &registry::emplace(handle_type ent, C &&arg)
         throw std::logic_error("duplicate component");
 
 
-    auto [pos, ptr] = construct_component(
+    auto [pos, ptr] = construct_component(ent,
             std::forward<C>(arg));
 
     comps.emplace(hash, ptr);
@@ -323,15 +332,15 @@ C &registry::emplace(handle_type ent, Args &&...args)
 }
 
 template <class C>
-void registry::destroy_component(handle_type owner)
+void registry::destroy_component(handle_type ent)
 {
-    const auto &comps = entities_.at(owner).components;
+    const auto &comps = entities_.at(ent).components;
 
     auto it = comps.find({ detail::type_hash<C>(), 0 });
     if (it == std::end(comps))
         throw std::out_of_range("no such component");
 
-    storage_for<C>().erase(it->ptr);
+    storage_for<C>().erase(static_cast<C *>(it->ptr));
 }
 
 template <class S>
@@ -358,6 +367,17 @@ template <detail::FatComponent C>
 handle_type registry::entity_of(const C &comp) const noexcept
 {
     return comp.owner;
+}
+
+template <class C, detail::FatComponent F>
+bool registry::has_sibling(const F &comp) const
+{
+    const auto ent = entity_of(comp);
+    if (!entities_.contains(ent))
+        throw std::out_of_range("no such entity");
+
+    const auto &[xor_hash, comps] = entities_.at(ent);
+    return comps.contains({ detail::type_hash<C>(), 0 });
 }
 
 template <class C, detail::FatComponent F>
