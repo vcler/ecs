@@ -9,6 +9,9 @@
 #include <detail/colony.hpp>
 
 namespace ecs {
+
+using handle_type = size_t;
+
 namespace detail {
 
 template <class C>
@@ -76,6 +79,13 @@ consteval auto repeated_tuple_impl(std::index_sequence<Is...>)
 template <class T, size_t N>
 using repeated_tuple = decltype(
         repeated_tuple_impl<T>(std::make_index_sequence<N>()));
+
+template <class C>
+concept FatComponent = requires(const C &comp)
+{
+    // stores handle of the entity it is owned by
+    { comp.owner } -> std::same_as<size_t>;
+};
 
 } // namespace detail
 } // namespace ecs

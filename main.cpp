@@ -31,9 +31,9 @@ int main()
 {
     ecs::registry reg;
 
-    reg.allocate(X{1.0}, Y{2.0}, Z{3.0});
-    reg.allocate(X{1.0}, Y{2.0}, Z{3.0});
-    auto ent =reg.allocate(X{1.0}, Y{1.0});
+    reg.create(X{1.0}, Y{2.0}, Z{3.0});
+    reg.create(X{1.0}, Y{2.0}, Z{3.0});
+    auto ent =reg.create(X{1.0}, Y{1.0});
     reg.emplace(ent, Z{99.0});
 
     reg.singleton<X>(X{-1.0});
@@ -60,7 +60,7 @@ int main()
 
 
 
-    reg.allocate(X{4.0}, Y{5.0}, Z{6.0});
+    reg.create(X{4.0}, Y{5.0}, Z{6.0});
 
     for (auto &[x, y] : reg.range<X, Y>()) {
         std::println("X == {}", x.valuex);

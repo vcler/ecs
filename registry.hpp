@@ -17,7 +17,6 @@ namespace ecs {
 
 class registry {
     using size_type = size_t;
-    using handle_type = size_t;
 
 public:
     registry() = default;
@@ -26,7 +25,7 @@ public:
     ~registry() = default;
 
     template <class... Cs>
-    handle_type allocate(Cs &&...args);
+    handle_type create(Cs &&...args);
 
     template <class... Cs>
     void destroy(handle_type ent);
@@ -46,6 +45,12 @@ public:
     S &singleton();
     template <class S>
     S &singleton(S &&singleton);
+
+    template <detail::FatComponent C>
+    handle_type entity_of(const C &comp) const noexcept;
+
+    template <class C, detail::FatComponent F>
+    C &sibling(const F &comp);
 
 private:
     template <class C>
@@ -100,7 +105,7 @@ private:
 namespace ecs {
 
 template <class... Cs>
-registry::handle_type registry::allocate(Cs &&...args)
+handle_type registry::create(Cs &&...args)
 {
     const handle_type ent = entity_counter_++;
     auto comps = component_set{};
@@ -347,6 +352,18 @@ S &registry::singleton(S &&singleton)
             std::make_unique<S>(std::forward<S>(singleton)));
 
     return *static_cast<S *>(singletons_.at(hash).get());
+}
+
+template <detail::FatComponent C>
+handle_type registry::entity_of(const C &comp) const noexcept
+{
+    return comp.owner;
+}
+
+template <class C, detail::FatComponent F>
+C &registry::sibling(const F &comp)
+{
+    return get<C>(entity_of(comp));
 }
 
 template <class C>
