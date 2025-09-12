@@ -88,6 +88,7 @@ private:
     // must own the view so we can return a view &
     // from operator *. This allows the caller to
     // bind to component &, i.e. auto &[x, y] = *it;
+    // which is not possible if we return an rvalue
     view<Cs...> view_;
 
     //  ranges can be created with different order,

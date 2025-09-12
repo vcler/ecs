@@ -39,9 +39,13 @@ public:
 
     template <class C>
     C &emplace(handle_type ent, C &&arg);
-
     template <class C, class... Args>
     C &emplace(handle_type ent, Args &&...args);
+
+    template <class S>
+    S &singleton();
+    template <class S>
+    S &singleton(S &&singleton);
 
 private:
     template <class C>
@@ -70,6 +74,8 @@ private:
             std::shared_ptr<void>> components_;
     std::unordered_map<handle_type, entinfo> entities_;
     std::unordered_map<size_type, view_range> ranges_;
+    std::unordered_map<size_type,
+            std::shared_ptr<void>> singletons_;
 };
 
 template <class C>
@@ -149,7 +155,7 @@ detail::storage_type<C> &registry::storage_for()
 
     if (!components_.contains(hash)) {
         components_.emplace(hash,
-                std::make_shared<detail::storage_type<C>>());
+                std::make_unique<detail::storage_type<C>>());
     }
 
     return *reinterpret_cast<detail::storage_type<C> *>(
@@ -182,12 +188,13 @@ typed_view_range<Cs...> registry::range_for()
     range.types.reserve(sizeof...(Cs));
     (range.types.emplace(detail::type_hash<Cs>()), ...);
 
-    // NOTE: optimization, instead of checking each
+    // NOTE: perf: instead of checking each
     // individual entities' component hashes for a
     // collision with the view's types, remember which
     // component xor hashes fit and which don't so that
     // the collision only has to be computed once for
     // every unique set of components (entity type)
+    // TODO: perf: probably faster just using a vector
     std::unordered_set<size_type> included;
     std::unordered_set<size_type> excluded;
 
@@ -320,6 +327,26 @@ void registry::destroy_component(handle_type owner)
         throw std::out_of_range("no such component");
 
     storage_for<C>().erase(it->ptr);
+}
+
+template <class S>
+S &registry::singleton()
+{
+    const auto hash = detail::type_hash<S>();
+    if (!singletons_.contains(hash))
+        throw std::out_of_range("no such singleton");
+
+    return *static_cast<S *>(singletons_.at(hash).get());
+}
+
+template <class S>
+S &registry::singleton(S &&singleton)
+{
+    const auto hash = detail::type_hash<S>();
+    singletons_.emplace(hash,
+            std::make_unique<S>(std::forward<S>(singleton)));
+
+    return *static_cast<S *>(singletons_.at(hash).get());
 }
 
 template <class C>

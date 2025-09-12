@@ -36,6 +36,10 @@ int main()
     auto ent =reg.allocate(X{1.0}, Y{1.0});
     reg.emplace(ent, Z{99.0});
 
+    reg.singleton<X>(X{-1.0});
+    auto &x2 = reg.singleton<X>();
+    std::println("{}", x2.valuex);
+
     //X &cx = reg.get<X>(ent);
     //std::println("x == {}", cx.valuex);
 
