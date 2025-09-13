@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include <detail/block.hpp>
+#include <ecs/detail/block.hpp>
 
 namespace ecs {
 namespace detail {

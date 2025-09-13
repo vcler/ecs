@@ -10,10 +10,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include <detail/colony.hpp>
-#include <detail/types.hpp>
-#include <component.hpp>
-#include <view.hpp>
+#include <ecs/detail/colony.hpp>
+#include <ecs/detail/types.hpp>
+#include <ecs/component.hpp>
+#include <ecs/view.hpp>
 
 namespace ecs {
 

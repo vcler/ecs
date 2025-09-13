@@ -8,7 +8,7 @@
 #include <typeinfo>
 #include <utility>
 
-#include <detail/colony.hpp>
+#include <ecs/detail/colony.hpp>
 
 namespace ecs {
 

@@ -7,9 +7,9 @@
 #include <type_traits>
 #include <unordered_set>
 
-#include <detail/types.hpp>
-#include <detail/colony.hpp>
-#include <component.hpp>
+#include <ecs/detail/types.hpp>
+#include <ecs/detail/colony.hpp>
+#include <ecs/component.hpp>
 
 namespace ecs {
 

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <registry.hpp>
+#include <ecs/registry.hpp>
 
 namespace ecs {
 
