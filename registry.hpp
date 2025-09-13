@@ -76,7 +76,7 @@ private:
         component_set components;
     };
 
-    handle_type entity_counter_ = 0uz;
+    handle_type max_entity_handle_ = 1uz;
     std::unordered_map<size_type,
             std::shared_ptr<void>> components_;
     std::unordered_map<handle_type, entinfo> entities_;
@@ -109,7 +109,9 @@ namespace ecs {
 template <class... Cs>
 handle_type registry::create(Cs &&...args)
 {
-    const handle_type ent = entity_counter_++;
+    static_assert(detail::pairwise_distinct<Cs...>);
+
+    const handle_type ent = max_entity_handle_++;
     auto comps = component_set{};
     comps.reserve(sizeof...(Cs));
     // ptrs to components for constucting views
@@ -261,7 +263,7 @@ C &registry::get(handle_type ent)
 
     auto it = comps.find({ detail::type_hash<C>(), 0 });
     if (it == std::end(comps))
-        throw std::out_of_range("no such component");
+        throw std::invalid_argument("no such component");
 
     return *static_cast<C *>(it->ptr);
 }
@@ -338,7 +340,7 @@ void registry::destroy_component(handle_type ent)
 
     auto it = comps.find({ detail::type_hash<C>(), 0 });
     if (it == std::end(comps))
-        throw std::out_of_range("no such component");
+        throw std::invalid_argument("no such component");
 
     storage_for<C>().erase(static_cast<C *>(it->ptr));
 }
@@ -354,11 +356,20 @@ S &registry::singleton()
 }
 
 template <class S>
-S &registry::singleton(S &&singleton)
+S &registry::singleton(S &&arg)
 {
     const auto hash = detail::type_hash<S>();
+
+    if (singletons_.contains(hash)) {
+        // assign, duplicate emplace has no effect
+        auto &singleton = *static_cast<S *>(
+                singletons_.at(hash).get());
+        singleton = arg;
+        return singleton;
+    }
+
     singletons_.emplace(hash,
-            std::make_unique<S>(std::forward<S>(singleton)));
+            std::make_unique<S>(std::forward<S>(arg)));
 
     return *static_cast<S *>(singletons_.at(hash).get());
 }

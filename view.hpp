@@ -153,7 +153,7 @@ inline bool view_range::captures(
     if (comps.size() < types.size())
         return false;
 
-    for (auto hash : types) {
+    for (const auto hash : types) {
         if (!comps.contains({ hash, 0 }))
             return false;
     }
