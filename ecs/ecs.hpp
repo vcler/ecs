@@ -27,6 +27,18 @@ handle_type create(registry &reg, Cs &&...components)
     return reg.create(std::forward<Cs>(components)...);
 }
 
+/** Returns a handle to a newly created entity.
+
+    This entity is associated with no components, but new
+    components can be added with the emplace() function.
+
+    @param reg
+*/
+inline handle_type create(registry &reg)
+{
+    return reg.create();
+}
+
 /** Destroy an existing entity.
 
     @throws out_of_range if the entity does not exist or

@@ -28,6 +28,7 @@ public:
 
     template <class... Cs>
     handle_type create(Cs &&...args);
+    handle_type create();
 
     template <class... Cs>
     void destroy(handle_type ent);
@@ -155,6 +156,16 @@ handle_type registry::create(Cs &&...args)
 
     const auto xor_hash = detail::xor_type_hash<Cs...>();
     entities_.emplace(ent, entinfo(xor_hash, std::move(comps)));
+
+    return ent;
+}
+
+inline handle_type registry::create()
+{
+    const handle_type ent = max_entity_handle_++;
+    const auto xor_hash = 0uz;
+
+    entities_.emplace(ent, entinfo(xor_hash, component_set{}));
 
     return ent;
 }
@@ -294,15 +305,16 @@ C &registry::emplace(handle_type ent, C &&arg)
         throw std::out_of_range("no such entity");
 
     const auto hash = detail::type_hash<C>();
-    auto &comps = entities_.at(ent).components;
+    auto &info = entities_.at(ent);
+    auto &comps = info.components;
     if (comps.contains({ hash, 0 }))
         throw std::logic_error("duplicate component");
-
 
     auto [pos, ptr] = construct_component(ent,
             std::forward<C>(arg));
 
     comps.emplace(hash, ptr);
+    info.xor_hash ^= hash;
 
     // update view
     std::vector<void *> view(comps.size() + 1uz);
