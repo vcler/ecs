@@ -2,7 +2,7 @@
 
 DISCLAIMER: Don't use this library, use as a reference for your own implementation.
 
-Itsy-bitsy header only C++23 entity component system inspired by the great talk [Overwatch Gameplay Architecture and Netcode]() from Tim Ford.
+Itsy-bitsy header only C++23 entity component system inspired by the great talk [Overwatch Gameplay Architecture and Netcode](https://www.youtube.com/watch?v=W3aieHjyNvw) from Tim Ford.
 Also includes a (poor) implementation of the C++26 [std::hive proposal](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p0447r22.html), probably the best container for storing components.
 For a complete overview of supported features, see the documented interface in ecs.hpp.
 
