@@ -140,9 +140,9 @@ S &singleton(registry &reg)
     return reg.singleton<S>();
 }
 
-/** Returns a reference to a singleton.  If the singleton
-    does not yet exist, it is created.  Else, it is assigned
-    to the existing singleton.
+/** Returns a reference to a newly created singleton.
+
+    @throws logic_error if the singleton already exists.
 
     @param reg
 

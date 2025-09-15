@@ -262,7 +262,9 @@ TEST_CASE("Singleton Management") {
         ecs::singleton(reg, world_time(0.016f, 0.0f));
         
         // Update
-        auto& time = ecs::singleton(reg, world_time(0.033f, 100.0f));
+        auto& time = ecs::singleton<world_time>(reg);
+        time.delta_time = 0.033f;
+        time.total_time = 100.0f;
         CHECK(time.delta_time == 0.033f);
         CHECK(time.total_time == 100.0f);
         

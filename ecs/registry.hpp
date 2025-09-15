@@ -363,11 +363,8 @@ S &registry::singleton(S &&arg)
     const auto hash = detail::type_hash<S>();
 
     if (singletons_.contains(hash)) {
-        // assign, duplicate emplace has no effect
-        auto &singleton = *static_cast<S *>(
-                singletons_.at(hash).get());
-        singleton = arg;
-        return singleton;
+        // throw, duplicate emplace has no effect
+        throw std::logic_error("singleton exists");
     }
 
     singletons_.emplace(hash,
