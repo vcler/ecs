@@ -36,6 +36,8 @@ public:
     template <class C>
     C &get(handle_type ent);
 
+    bool contains(handle_type ent) const noexcept;
+
     template <class C, class... Cs>
     auto range();
 
@@ -296,6 +298,11 @@ C &registry::get(handle_type ent)
         throw std::invalid_argument("no such component");
 
     return *static_cast<C *>(it->ptr);
+}
+
+inline bool registry::contains(handle_type ent) const noexcept
+{
+    return entities_.contains(ent);
 }
 
 inline void registry::destroy(handle_type ent)

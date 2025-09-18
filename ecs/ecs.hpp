@@ -92,6 +92,17 @@ C &get(registry &reg, handle_type ent)
     return reg.get<C>(ent);
 }
 
+/** Check if the registry owns an entity.
+    
+    @param reg
+
+    @param ent Entity to check for.
+*/
+inline bool contains(registry &reg, handle_type ent) noexcept
+{
+    return reg.contains(ent);
+}
+
 /** Returns a range to iterate over all components of a type
     or component tuples.
 
