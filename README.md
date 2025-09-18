@@ -9,7 +9,7 @@ For a complete overview of supported features, see the documented interface in e
 Entities are just handles associated with a set of components.
 You cannot (and should not) iterate over entities.
 You can, however, iterate over tuples of components, that is, all entities associated with the tuple.
-Components are stored in (mostly) contigous memory.
+Components are stored seperatly in (mostly) contigous memory.
 There is some overhead whenever a new range (for iteration of tuples) is first created, but no further cost for later uses.
 Also when using ranges, the order of components in tuples does not matter, the same internal range is reused.
 Abuses type erasure to reduce the number of templates forced onto the user. As of right now, error handling is exception based - no expected values YET.
@@ -49,9 +49,10 @@ void damage_system(ecs::registry &reg)
         }
     }
 
-    // regen
     for (auto &hp : ecs::range<hp>(reg)) {
-        hp.value = std::min(hp.max, hp.value + .1f);
+        // destroy entity and all it's components
+        if (hp.value == 0.f)
+            ecs::destroy(reg, hp);
     }
 }
 
@@ -67,9 +68,6 @@ int main()
     ecs::emplace(reg, ent, hp(32.f, 64.f));
 
     damage_system(reg);
-
-    // components must be known for destruction
-    ecs::destroy<pos, vel, hp>(reg, ent);
 
     // ~ecs::registry() destroys remains
     return 0;

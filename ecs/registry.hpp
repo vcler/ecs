@@ -3,6 +3,7 @@
 #pragma once
 
 #include <array>
+#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <tuple>
@@ -10,9 +11,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include <ecs/component.hpp>
 #include <ecs/detail/colony.hpp>
 #include <ecs/detail/types.hpp>
-#include <ecs/component.hpp>
 #include <ecs/view.hpp>
 
 namespace ecs {
@@ -30,7 +31,6 @@ public:
     handle_type create(Cs &&...args);
     handle_type create();
 
-    template <class... Cs>
     void destroy(handle_type ent);
 
     template <class C>
@@ -71,12 +71,26 @@ private:
     template <class C>
     void destroy_component(handle_type ent);
 
+    using entity_dtor_fn = std::function<
+            void(registry &, handle_type)>;
+
+    entity_dtor_fn placeholder_dtor();
+    template <class... Cs>
+    entity_dtor_fn entity_dtor();
+    template <class... Cs>
+    entity_dtor_fn nested_entity_dtor(entity_dtor_fn &&dtor);
+
     struct entinfo {
-        entinfo(size_t hash, component_set &&comps)
-            : xor_hash(hash), components(std::move(comps)) { }
+        entinfo(size_t hash, component_set &&comps,
+            entity_dtor_fn dtor)
+            : xor_hash(hash)
+            , components(std::move(comps))
+            , dtor(dtor)
+        { }
 
         size_t xor_hash;
         component_set components;
+        entity_dtor_fn dtor;
     };
 
     handle_type max_entity_handle_ = 1uz;
@@ -155,7 +169,9 @@ handle_type registry::create(Cs &&...args)
     }
 
     const auto xor_hash = detail::xor_type_hash<Cs...>();
-    entities_.emplace(ent, entinfo(xor_hash, std::move(comps)));
+    entities_.emplace(ent,
+            entinfo(xor_hash, std::move(comps),
+                entity_dtor<Cs...>()));
 
     return ent;
 }
@@ -165,7 +181,8 @@ inline handle_type registry::create()
     const handle_type ent = max_entity_handle_++;
     const auto xor_hash = 0uz;
 
-    entities_.emplace(ent, entinfo(xor_hash, component_set{}));
+    entities_.emplace(ent, entinfo(xor_hash, component_set{},
+            placeholder_dtor()));
 
     return ent;
 }
@@ -281,8 +298,7 @@ C &registry::get(handle_type ent)
     return *static_cast<C *>(it->ptr);
 }
 
-template <class... Cs>
-void registry::destroy(handle_type ent)
+inline void registry::destroy(handle_type ent)
 {
     if (!entities_.contains(ent))
         throw std::out_of_range("no such entity");
@@ -294,7 +310,9 @@ void registry::destroy(handle_type ent)
             range.erase(ent);
     }
 
-    (destroy_component<Cs>(ent), ...);
+    // destoy components
+    info.dtor(*this, ent);
+
     entities_.erase(ent);
 }
 
@@ -315,6 +333,7 @@ C &registry::emplace(handle_type ent, C &&arg)
 
     comps.emplace(hash, ptr);
     info.xor_hash ^= hash;
+    info.dtor = nested_entity_dtor<C>(std::move(info.dtor));
 
     // update view
     std::vector<void *> view(comps.size() + 1uz);
@@ -345,6 +364,38 @@ C &registry::emplace(handle_type ent, Args &&...args)
 {
     // extra move but less code
     return emplace(ent, C(std::forward<Args>(args)...));
+}
+
+inline registry::entity_dtor_fn registry::placeholder_dtor()
+{
+    // for componentless entities
+    return [](registry &, handle_type) { };
+}
+
+template <class... Cs>
+registry::entity_dtor_fn registry::entity_dtor()
+{
+    // destroys all components Cs
+    return [](registry &reg, handle_type ent)
+    {
+        (..., reg.destroy_component<Cs>(ent));
+    };
+}
+
+template <class... Cs>
+registry::entity_dtor_fn registry::nested_entity_dtor(
+    entity_dtor_fn &&previous_dtor)
+{
+    // if components are added after creation with
+    // emplace(), they cant't be destoyed by the
+    // original dtor.  So we create a new dtor to
+    // destroy the emplace'd component, and then
+    // call the previous dtor to destroy the rest.
+    return [previous_dtor](registry &reg, handle_type ent)
+    {
+        previous_dtor(reg, ent);
+        (..., reg.destroy_component<Cs>(ent));
+    };
 }
 
 template <class C>
@@ -398,7 +449,7 @@ bool registry::has_sibling(const F &comp) const
     if (!entities_.contains(ent))
         throw std::out_of_range("no such entity");
 
-    const auto &[xor_hash, comps] = entities_.at(ent);
+    const auto &[xor_hash, comps, dtor] = entities_.at(ent);
     return comps.contains({ detail::type_hash<C>(), 0 });
 }
 

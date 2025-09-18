@@ -39,26 +39,38 @@ inline handle_type create(registry &reg)
     return reg.create();
 }
 
-/** Destroy an existing entity.
+/** Destroy an existing entity and it's components.
 
     @throws out_of_range if the entity does not exist or
     invalid_argument if the entity is not associated with
     the specified component.
 
-    @tparam Cs All components associated with this entity.
-
-    @note Failure to list a components associated with the
-    entity will result in it not being destroyed, and it
-    will remain accessible through functions like range().
-
     @param reg
 
     @param ent The handle of the entity to be destroyed.
 */
-template <class... Cs>
-void destroy(registry &reg, handle_type ent)
+inline void destroy(registry &reg, handle_type ent)
 {
-    reg.destroy<Cs...>(ent);
+    reg.destroy(ent);
+}
+
+/** Destroy an existing entity and it's components.
+
+    @throws out_of_range if the entity does not exist or
+    invalid_argument if the entity is not associated with
+    the specified component.
+
+    @param reg
+
+    @param comp Any component associated with the entity
+    that will be destroyed.
+
+    @tparam F Component type, must be a fat component.
+*/
+template <detail::FatComponent F>
+inline void destroy(registry &reg, F const &comp)
+{
+    reg.destroy(reg.entity_of(comp));
 }
 
 /** Returns the component of an entity.

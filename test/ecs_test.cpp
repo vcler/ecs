@@ -146,7 +146,7 @@ TEST_CASE("Entity Destruction") {
         auto ent = ecs::create(reg, position(0.0f, 0.0f), velocity(1.0f, 1.0f));
         
         // Should not throw
-        ecs::destroy<position, velocity>(reg, ent);
+        ecs::destroy(reg, ent);
         
         // Access should now throw
         CHECK_THROWS_AS(ecs::get<position>(reg, ent), std::out_of_range);
@@ -158,7 +158,7 @@ TEST_CASE("Entity Destruction") {
         
         // Only specify position, not velocity - according to docs this should
         // leave velocity component accessible
-        ecs::destroy<position>(reg, ent);
+        ecs::destroy(reg, ent);
         
         CHECK_THROWS_AS(ecs::get<position>(reg, ent), std::out_of_range);
         // velocity should still exist according to the documentation
@@ -167,12 +167,7 @@ TEST_CASE("Entity Destruction") {
     
     SUBCASE("Destroy non-existing entity should throw") {
         ecs::handle_type invalid_ent{};
-        CHECK_THROWS_AS(ecs::destroy<position>(reg, invalid_ent), std::out_of_range);
-    }
-    
-    SUBCASE("Destroy with wrong component types should throw") {
-        auto ent = ecs::create(reg, position(0.0f, 0.0f));
-        CHECK_THROWS_AS(ecs::destroy<velocity>(reg, ent), std::invalid_argument);
+        CHECK_THROWS_AS(ecs::destroy(reg, invalid_ent), std::out_of_range);
     }
 }
 
@@ -318,7 +313,7 @@ TEST_CASE("Fat Component Operations") {
         ecs::emplace<health>(reg, ent2, 25.0f, 50.0f);
         
         // Destroy the first entity
-        ecs::destroy<position, health>(reg, ent);
+        ecs::destroy(reg, ent);
         
         // Operations on hp should now fail since its owner is destroyed
         CHECK_THROWS_AS(ecs::has_sibling<velocity>(reg, hp), std::out_of_range);
@@ -435,7 +430,7 @@ TEST_CASE("Complex System Simulation") {
         CHECK(to_remove[0] == enemy1);
         
         // Clean up (this should work if components are properly specified)
-        ecs::destroy<position, velocity, health>(reg, enemy1);
+        ecs::destroy(reg, enemy1);
         
         // Verify removal
         CHECK_THROWS_AS(ecs::get<health>(reg, enemy1), std::out_of_range);
