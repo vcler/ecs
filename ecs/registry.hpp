@@ -9,6 +9,7 @@
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <ecs/component.hpp>
@@ -50,6 +51,9 @@ public:
     S &singleton();
     template <class S>
     S &singleton(S &&singleton);
+    template <class S, class... Args>
+    S &singleton(std::in_place_t, Args &&...args);
+    
 
     template <detail::FatComponent C>
     handle_type entity_of(const C &comp) const noexcept;
@@ -431,7 +435,6 @@ template <class S>
 S &registry::singleton(S &&arg)
 {
     const auto hash = detail::type_hash<S>();
-
     if (singletons_.contains(hash)) {
         // throw, duplicate emplace has no effect
         throw std::logic_error("singleton exists");
@@ -439,6 +442,21 @@ S &registry::singleton(S &&arg)
 
     singletons_.emplace(hash,
             std::make_unique<S>(std::forward<S>(arg)));
+
+    return *static_cast<S *>(singletons_.at(hash).get());
+}
+
+template <class S, class... Args>
+S &registry::singleton(std::in_place_t, Args &&...args)
+{
+    const auto hash = detail::type_hash<S>();
+    if (singletons_.contains(hash)) {
+        // throw, duplicate emplace has no effect
+        throw std::logic_error("singleton exists");
+    }
+
+    singletons_.emplace(hash,
+            std::make_unique<S>(std::forward<Args>(args)...));
 
     return *static_cast<S *>(singletons_.at(hash).get());
 }

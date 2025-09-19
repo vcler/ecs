@@ -189,7 +189,28 @@ S &singleton(registry &reg)
 template <class S>
 S &singleton(registry &reg, S &&singleton)
 {
-    return reg.singleton(std::forward<S>(singleton));
+    return reg.singleton(std::in_place_t{},
+            std::forward<S>(singleton));
+}
+
+/** Returns a reference to a newly created singleton.
+    The singleton is created in place.
+
+    @throws logic_error if the singleton already exists.
+
+    @tparam S Type of the singleton.
+
+    @tparam Args
+
+    @param reg
+
+    @param args Arguments forwarded to construct the
+    singleton from.
+*/
+template <class S, class... Args>
+S &singleton(registry &reg, std::in_place_t, Args &&...args)
+{
+    return reg.singleton<S>(std::forward<Args>(args)...);
 }
 
 /** Returns the handle of the entity that owns the component.
