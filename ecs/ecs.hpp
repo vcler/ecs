@@ -221,17 +221,14 @@ S &singleton(registry &reg, std::in_place_t, Args &&...args)
     Any FatComponent that is associated with an entity will
     automatically have it set by the registry.
 
-    @param reg
-
     @param component A component of the returned entity.
 
     @tparam F Type of the entity.
 */
 template <detail::FatComponent F>
-handle_type entity_of(const registry &reg,
-    const F &component) noexcept
+handle_type entity_of(const F &component) noexcept
 {
-    return reg.entity_of(component);
+    return component.owner;
 }
 
 /** Returns true if the entity that owns component also owns

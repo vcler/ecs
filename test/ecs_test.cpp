@@ -280,7 +280,7 @@ TEST_CASE("Fat Component Operations") {
     auto& hp = ecs::emplace<health>(reg, ent, 50.0f, 100.0f);
     
     SUBCASE("Entity ownership verification") {
-        auto owner = ecs::entity_of(reg, hp);
+        auto owner = ecs::entity_of(hp);
         CHECK(owner == ent);
         CHECK(hp.owner == ent);
     }
@@ -373,7 +373,7 @@ TEST_CASE("Complex System Simulation") {
     SUBCASE("Damage system using fat components") {
         // Apply damage from projectiles to entities with health
         for (auto& dmg : ecs::range<damage>(reg)) {
-            auto projectile_pos = ecs::get<position>(reg, ecs::entity_of(reg, dmg));
+            auto projectile_pos = ecs::get<position>(reg, ecs::entity_of(dmg));
             
             for (auto& hp : ecs::range<health>(reg)) {
                 if (ecs::has_sibling<position>(reg, hp)) {
