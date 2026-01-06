@@ -14,6 +14,8 @@ namespace ecs {
 
 using handle_type = size_t;
 
+constexpr handle_type bad_handle{};
+
 namespace detail {
 
 template <class C>
