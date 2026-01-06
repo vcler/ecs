@@ -112,7 +112,8 @@ template <class C>
 class component_range {
 public:
     using iterator = detail::storage_type<C>::iterator;
-    using const_iterator = const iterator;
+    using const_iterator = detail::storage_type<C>
+            ::const_iterator;
 
     component_range(detail::storage_type<C> &components);
 
