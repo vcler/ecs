@@ -75,9 +75,18 @@ private:
 template <class Colony>
 class colony_iterator {
     using size_type = Colony::size_type;
+public:
     using value_type = Colony::value_type;
+    using difference_type = std::ptrdiff_t;
+    using iterator_concept = std::input_iterator_tag;
 
 public:
+    colony_iterator()
+        : colony_(nullptr)
+        , pos_(boost::dynamic_bitset<>::npos)
+    {
+    }
+
     colony_iterator(Colony *colony, size_type pos)
         : colony_(colony)
         , pos_(pos)
@@ -109,7 +118,8 @@ public:
 
     bool operator==(const colony_iterator &other) const noexcept
     {
-        return colony_ == other.colony_ && pos_ == other.pos_;
+        //return colony_ == other.colony_ && pos_ == other.pos_;
+        return pos_ == other.pos_;
     }
 
     size_type pos() const noexcept { return pos_; }
@@ -264,13 +274,13 @@ colony<T>::const_iterator colony<T>::begin() const noexcept
 template <class T>
 colony<T>::iterator colony<T>::end() noexcept
 {
-    return iterator(this, boost::dynamic_bitset<>::npos);
+    return {};
 }
 
 template <class T>
 colony<T>::const_iterator colony<T>::end() const noexcept
 {
-    return const_iterator(this, boost::dynamic_bitset<>::npos);
+    return {};
 }
 
 template <class T>
