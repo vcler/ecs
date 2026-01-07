@@ -71,7 +71,7 @@ private:
     typed_view_range<Cs...> range_for();
 
     template <class C>
-    std::tuple<size_type, C *>
+    std::tuple<size_type, std::remove_cvref_t<C> *>
     construct_component(handle_type owner, C &&comp);
 
     template <class C>
@@ -274,7 +274,7 @@ typed_view_range<Cs...> registry::range_for()
 }
 
 template <class C>
-std::tuple<registry::size_type, C *>
+std::tuple<registry::size_type, std::remove_cvref_t<C> *>
 registry::construct_component(handle_type owner, C &&arg)
 {
     auto &stor = storage_for<C>();
@@ -413,13 +413,15 @@ registry::entity_dtor_fn registry::nested_entity_dtor(
 template <class C>
 void registry::destroy_component(handle_type ent)
 {
+    using type = std::remove_cvref_t<C>;
+
     const auto &comps = entities_.at(ent).components;
 
-    auto it = comps.find({ detail::type_hash<C>(), 0 });
+    auto it = comps.find({ detail::type_hash<type>(), 0 });
     if (it == std::end(comps))
         throw std::invalid_argument("no such component");
 
-    storage_for<C>().erase(static_cast<C *>(it->ptr));
+    storage_for<type>().erase(static_cast<type *>(it->ptr));
 }
 
 template <class S>
